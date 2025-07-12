@@ -1,0 +1,438 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define Max_mon 9
+#define MAX_NOTES 100
+#define MAX_LENGTH 200
+
+// Liet ke cac mon hoc, dung de luu tru diem cho tung mon 
+const char *Ten_mon_hoc[Max_mon] = {
+    "Toan", "Ngu Van", "Tieng Anh",
+    "Vat ly", "Hoa hoc", "Sinh hoc",
+    "Lich su", "Dia ly", "GDCD"
+};
+
+// Menu chuc nang cua chuong trinh 
+void Menu();
+float Tinh_diem_hoc_ki(const char *Ten_hoc_ky, const char *file_csv);
+void Ghi_diem_vao_file(const char *ten_hocky, const char *filename, float tk[], float gk[], float ck[]);
+void Doc_va_hien_diem_tu_file(const char *ten_hocky, const char *filename);
+void Tu_tinh_diem_hocky();
+void Tu_tinh_diem_mon();
+void Cap_nhat_diem();
+void Tao_NOTE(char notes[][MAX_LENGTH], int *count);
+void Xoa_NOTE(char notes[][MAX_LENGTH], int *count);
+void Edit_NOTE(char notes[][MAX_LENGTH], int count);
+void In_NOTE(char notes[][MAX_LENGTH], int count);
+void Luu_NOTE(char notes[][MAX_LENGTH], int count);
+int loadNotes(char notes[][MAX_LENGTH]);
+
+void Menu() {
+    printf("\n|----------- Phan mem VietSchool ---------|\n");
+    printf("|------------------ MENU -----------------|\n");
+    printf("| 1: Xem diem                             |\n");
+    printf("| 2: Nhap diem                            |\n");
+    printf("| 3: Tinh diem                            |\n");
+    printf("| 4: Cap nhat diem                        |\n");
+    printf("| 5: Quan ly ghi chu                      |\n");
+    printf("| 0: Thoat chuong trinh                   |\n");
+    printf("|-----------------------------------------|\n");
+}
+
+float Tinh_diem_hoc_ki(const char *Ten_hoc_ky, const char *file_csv) {
+    float d_tki[Max_mon], d_gki[Max_mon], d_cki[Max_mon];
+    float dtb_mon[Max_mon];
+    float dtb_hoc_ki = 0;
+
+    printf("\n------- Nhap diem %s -------\n", Ten_hoc_ky);
+    for (int i = 0; i < Max_mon; i++) {
+        printf("Nhap diem mon %-10s\n", Ten_mon_hoc[i]);
+        printf("  - Thuong ky: "); scanf("%f", &d_tki[i]);
+        printf("  - Giua ky:   "); scanf("%f", &d_gki[i]);
+        printf("  - Cuoi ky:   "); scanf("%f", &d_cki[i]);
+
+        dtb_mon[i] = (d_tki[i] + 2*d_gki[i] + 3*d_cki[i]) / 6.0;
+        dtb_hoc_ki += dtb_mon[i];
+    }
+
+    dtb_hoc_ki /= Max_mon;
+
+    printf("\n+-----+----------------+-----------+\n");
+    printf("| STT | Ten mon hoc    | Diem TB   |\n");
+    printf("+-----+----------------+-----------+\n");
+    for (int i = 0; i < Max_mon; i++) {
+        printf("| %3d | %-14s | %9.2f |\n", i + 1, Ten_mon_hoc[i], dtb_mon[i]);
+    }
+    printf("+-----+----------------+-----------+\n");
+    printf("|     Diem trung binh %s: %5.2f |\n", Ten_hoc_ky, dtb_hoc_ki);
+    printf("+----------------------------------+\n");
+    Ghi_diem_vao_file(Ten_hoc_ky, file_csv, d_tki, d_gki, d_cki);
+    return dtb_hoc_ki;
+}
+
+void Ghi_diem_vao_file(const char *ten_hocky, const char *filename, float tk[], float gk[], float ck[]) {
+    FILE *f = fopen(filename, "w");
+    if (f == NULL) {
+        printf(">> Loi mo file de ghi!\n");
+        return;
+    }
+
+    fprintf(f, "Mon,DiemTK,DiemGK,DiemCK\n");
+    for (int i = 0; i < Max_mon; i++) {
+        fprintf(f, "%s,%.2f,%.2f,%.2f\n", Ten_mon_hoc[i], tk[i], gk[i], ck[i]);
+    }
+
+    fclose(f);
+    printf(">> Da luu diem %s vao file '%s'.\n", ten_hocky, filename);
+}
+
+void Doc_va_hien_diem_tu_file(const char *ten_hocky, const char *filename) {
+    FILE *f = fopen(filename, "r");
+    if (f == NULL) {
+        printf(">> Chua co du lieu diem %s!\n", ten_hocky);
+        return;
+    }
+
+    char line[100];
+    char mon[50];
+    float tk, gk, ck, dtb;
+    int stt = 0;
+    float tong_dtb = 0;
+
+    fgets(line, sizeof(line), f); // B? d?ng tiêu đ?
+
+    printf("\n+-----+----------------+-----------+\n");
+    printf("| STT | Ten mon hoc    | Diem TB   |\n");
+    printf("+-----+----------------+-----------+\n");
+
+    while (fgets(line, sizeof(line), f)) {
+        sscanf(line, "%[^,],%f,%f,%f", mon, &tk, &gk, &ck);
+        dtb = (tk + 2 * gk + 3 * ck) / 6.0;
+        tong_dtb += dtb;
+        printf("| %3d | %-14s | %9.2f |\n", ++stt, mon, dtb);
+    }
+
+    float dtb_hocky = (stt > 0) ? (tong_dtb / stt) : 0;
+
+    printf("+-----+----------------+-----------+\n");
+    printf("|     Diem TB cua %s: %5.2f |\n", ten_hocky, dtb_hocky);
+    printf("+----------------------------------+\n");
+
+    fclose(f);
+}
+
+void Tu_tinh_diem_hocky() {
+    float d_tki[Max_mon], d_gki[Max_mon], d_cki[Max_mon];
+    float dtb_mon[Max_mon];
+    float dtb_hoc_ki = 0;
+
+    printf("\n------- Nhap diem -------\n");
+    for (int i = 0; i < Max_mon; i++) {
+        printf("Nhap diem mon %-10s\n", Ten_mon_hoc[i]);
+        printf("  - Thuong ky: "); scanf("%f", &d_tki[i]);
+        printf("  - Giua ky:   "); scanf("%f", &d_gki[i]);
+        printf("  - Cuoi ky:   "); scanf("%f", &d_cki[i]);
+        dtb_mon[i] = (d_tki[i] + 2*d_gki[i] + 3*d_cki[i]) / 6.0;
+        dtb_hoc_ki += dtb_mon[i];
+    }
+
+    dtb_hoc_ki /= Max_mon;
+
+    printf("\n+-----+----------------+-----------+\n");
+    printf("| STT | Ten mon hoc    | Diem TB   |\n");
+    printf("+-----+----------------+-----------+\n");
+    for (int i = 0; i < Max_mon; i++) {
+        printf("| %3d | %-14s | %9.2f |\n", i + 1, Ten_mon_hoc[i], dtb_mon[i]);
+    }
+    printf("+-----+----------------+-----------+\n");
+    printf("     Diem trung binh: %5.2f \n", dtb_hoc_ki);
+    printf("+----------------------------------+\n");
+}
+
+void Tu_tinh_diem_mon() {
+    float tk, gk, ck;
+    float dtb;
+
+    printf("Nhap diem thuong ky: ");
+    scanf("%f", &tk);
+    printf("Nhap diem giua ky:   ");
+    scanf("%f", &gk);
+    printf("Nhap diem cuoi ky:   ");
+    scanf("%f", &ck);
+
+    dtb = (tk + 2 * gk + 3 * ck) / 6.0;
+    printf(">> Diem trung binh mon la: %.2f\n", dtb);
+}
+
+void Cap_nhat_diem() {
+    int hocky, mon, cot;
+    char filename[20];
+    float d_tki[Max_mon] = {0}, d_gki[Max_mon] = {0}, d_cki[Max_mon] = {0};
+
+    // Ch?n h?c k?
+    printf("\n--- CAP NHAT DIEM ---\n");
+    printf("1: Hoc ky 1\n");
+    printf("2: Hoc ky 2\n");
+    printf("Moi ban chon: ");
+    scanf("%d", &hocky);
+    getchar();
+    if (hocky != 1 && hocky != 2) {
+        printf("Lua chon hoc ky khong hop le!\n");
+        return;
+    }
+    strcpy(filename, hocky == 1 ? "diem_hk1.csv" : "diem_hk2.csv");
+
+    // Đ?c đi?m hi?n t?i t? file
+    FILE *f = fopen(filename, "r");
+    if (f != NULL) {
+        char line[100];
+        char mon[50];
+        fgets(line, sizeof(line), f); // B? d?ng tiêu đ?
+        for (int i = 0; i < Max_mon; i++) {
+            if (fgets(line, sizeof(line), f)) {
+                sscanf(line, "%[^,],%f,%f,%f", mon, &d_tki[i], &d_gki[i], &d_cki[i]);
+            }
+        }
+        fclose(f);
+    }
+
+    // Ch?n môn h?c
+    printf("\nChon mon hoc can cap nhat:\n");
+    for (int i = 0; i < Max_mon; i++) {
+        printf("%d: %s\n", i + 1, Ten_mon_hoc[i]);
+    }
+    printf("Moi ban chon: ");
+    scanf("%d", &mon);
+    getchar();
+    if (mon < 1 || mon > Max_mon) {
+        printf("Lua chon mon hoc khong hop le!\n");
+        return;
+    }
+    mon--; // Ch? s? m?ng b?t đ?u t? 0
+
+    // Ch?n c?t đi?m
+    printf("\nChon cot diem can cap nhat:\n");
+    printf("1: Thuong ky\n");
+    printf("2: Giua ky\n");
+    printf("3: Cuoi ky\n");
+    printf("Moi ban chon: ");
+    scanf("%d", &cot);
+    getchar();
+    if (cot < 1 || cot > 3) {
+        printf("Lua chon cot diem khong hop le!\n");
+        return;
+    }
+
+    // Nh?p đi?m m?i
+    float new_score;
+    printf("Nhap diem moi cho %s (%s): ", Ten_mon_hoc[mon], cot == 1 ? "Thuong ky" : (cot == 2 ? "Giua ky" : "Cuoi ky"));
+    scanf("%f", &new_score);
+    getchar();
+
+    // C?p nh?t đi?m
+    if (cot == 1) d_tki[mon] = new_score;
+    else if (cot == 2) d_gki[mon] = new_score;
+    else d_cki[mon] = new_score;
+
+    // Lưu l?i vào file
+    Ghi_diem_vao_file(hocky == 1 ? "Hoc ky 1" : "Hoc ky 2", filename, d_tki, d_gki, d_cki);
+}
+
+void Tao_NOTE(char notes[][MAX_LENGTH], int *count) {
+    if (*count >= MAX_NOTES) {
+        printf("Danh sach ghi chu da day!\n");
+        return;
+    }
+    printf("Nhap ghi chu moi: ");
+    fgets(notes[*count], MAX_LENGTH, stdin);
+    notes[*count][strcspn(notes[*count], "\n")] = 0;
+    (*count)++;
+    printf("Da tao ghi chu.\n");
+}
+
+void Xoa_NOTE(char notes[][MAX_LENGTH], int *count) {
+    int index;
+    printf("Nhap so thu tu ghi chu can xoa (1-%d): ", *count);
+    scanf("%d", &index);
+    getchar();
+    if (index < 1 || index > *count) {
+        printf("So thu tu khong hop le!\n");
+        return;
+    }
+    for (int i = index - 1; i < *count - 1; i++) {
+        strcpy(notes[i], notes[i + 1]);
+    }
+    (*count)--;
+    printf("Da xoa ghi chu.\n");
+}
+
+void Edit_NOTE(char notes[][MAX_LENGTH], int count) {
+    int index;
+    printf("Nhap so thu tu ghi chu can sua (1-%d): ", count);
+    scanf("%d", &index);
+    getchar();
+    if (index < 1 || index > count) {
+        printf("So thu tu khong hop le!\n");
+        return;
+    }
+    printf("Nhap noi dung ghi chu moi: ");
+    fgets(notes[index - 1], MAX_LENGTH, stdin);
+    notes[index - 1][strcspn(notes[index - 1], "\n")] = 0;
+    printf("Da sua ghi chu.\n");
+}
+
+void In_NOTE(char notes[][MAX_LENGTH], int count) {
+    if (count == 0) {
+        printf("Khong co ghi chu nao.\n");
+        return;
+    }
+    printf("\nDanh sach ghi chu:\n");
+    for (int i = 0; i < count; i++) {
+        printf("%d. %s\n", i + 1, notes[i]);
+    }
+}
+
+void Luu_NOTE(char notes[][MAX_LENGTH], int count) {
+    FILE *file = fopen("notes.txt", "w");
+    if (file == NULL) {
+        printf("Khong the tao file!\n");
+        return;
+    }
+    fprintf(file, "%d\n", count);
+    for (int i = 0; i < count; i++) {
+        fprintf(file, "%s\n", notes[i]);
+    }
+    fclose(file);
+    printf("Da luu ghi chu vao file notes.txt\n");
+}
+
+int loadNotes(char notes[][MAX_LENGTH]) {
+    FILE *file = fopen("notes.txt", "r");
+    if (file == NULL) {
+        return 0;
+    }
+    int count;
+    fscanf(file, "%d\n", &count);
+    if (count > MAX_NOTES) count = MAX_NOTES;
+    for (int i = 0; i < count; i++) {
+        fgets(notes[i], MAX_LENGTH, file);
+        notes[i][strcspn(notes[i], "\n")] = 0;
+    }
+    fclose(file);
+    return count;
+}
+
+int main() {
+    int chon;
+    float dtb_hocki_1 = -1, dtb_hocki_2 = -1, dtb_ca_nam = -1;
+    char notes[MAX_NOTES][MAX_LENGTH];
+    int noteCount = 0;
+
+    // T?i ghi chú t? file
+    noteCount = loadNotes(notes);
+
+    while (1) {
+        Menu();
+        printf("Moi ban chon: ");
+        scanf("%d", &chon);
+        getchar();
+
+        switch (chon) {
+            case 0:
+                printf("Tam biet va hen gap lai!\n");
+                return 0;
+
+            case 1: {
+                printf("\n--- XEM DIEM ---\n");
+                printf("1: Xem diem hoc ky 1\n");
+                printf("2: Xem diem hoc ky 2\n");
+                printf("Moi ban chon: ");
+                scanf("%d", &chon);
+                getchar();
+                if (chon == 1)
+                    Doc_va_hien_diem_tu_file("Hoc ky 1", "diem_hk1.csv");
+                else if (chon == 2)
+                    Doc_va_hien_diem_tu_file("Hoc ky 2", "diem_hk2.csv");
+                else
+                    printf("Lua chon khong hop le!\n");
+                break;
+            }
+
+            case 2: {
+                printf("\n--- NHAP DIEM ---\n");
+                printf("1: Nhap diem hoc ky 1\n");
+                printf("2: Nhap diem hoc ky 2\n");
+                printf("Moi ban chon: ");
+                scanf("%d", &chon);
+                getchar();
+                if (chon == 1)
+                    dtb_hocki_1 = Tinh_diem_hoc_ki("Hoc ky 1", "diem_hk1.csv");
+                else if (chon == 2)
+                    dtb_hocki_2 = Tinh_diem_hoc_ki("Hoc ky 2", "diem_hk2.csv");
+                else
+                    printf("Lua chon khong hop le!\n");
+                break;
+            }
+
+            case 3: {
+                printf("\n--- TU TINH DIEM ---\n");
+                printf("1: Tinh diem trung binh cua mot mon\n");
+                printf("2: Tinh diem trung binh cua mot hoc ky\n");
+                printf("3: Tinh diem trung binh cua ca nam\n");
+                printf("0: Quay lai Menu\n");
+                printf("Moi ban chon: ");
+                scanf("%d", &chon);
+                getchar();
+
+                switch (chon) {
+                    case 0: break;
+                    case 1: Tu_tinh_diem_mon(); break;
+                    case 2: Tu_tinh_diem_hocky(); break;
+                    case 3:
+                        if (dtb_hocki_1 >= 0 && dtb_hocki_2 >= 0) {
+                            dtb_ca_nam = (dtb_hocki_1 + dtb_hocki_2) / 2;
+                            printf(">> Diem trung binh ca nam: %.2f\n", dtb_ca_nam);
+                        } else {
+                            printf(">> Vui long nhap diem hoc ky truoc!\n");
+                        }
+                        break;
+                    default:
+                        printf("Lua chon khong hop le!\n");
+                }
+                break;
+            }
+
+            case 4: {
+                Cap_nhat_diem();
+                break;
+            }
+
+            case 5: {
+                printf("\n--- QUAN LY GHI CHU ---\n");
+                printf("1: Tao ghi chu\n");
+                printf("2: Xoa ghi chu\n");
+                printf("3: Sua ghi chu\n");
+                printf("4: Hien thi tat ca ghi chu\n");
+                printf("0: Quay lai Menu\n");
+                printf("Moi ban chon: ");
+                scanf("%d", &chon);
+                getchar();
+
+                switch (chon) {
+                    case 0: break;
+                    case 1: Tao_NOTE(notes, &noteCount); Luu_NOTE(notes, noteCount); break;
+                    case 2: Xoa_NOTE(notes, &noteCount); Luu_NOTE(notes, noteCount); break;
+                    case 3: Edit_NOTE(notes, noteCount); Luu_NOTE(notes, noteCount); break;
+                    case 4: In_NOTE(notes, noteCount); break;
+                    default: printf("Lua chon khong hop le!\n");
+                }
+                break;
+            }
+
+            default:
+                printf(">> Lua chon khong hop le!\n");
+        }
+    }
+    return 0;
+}
